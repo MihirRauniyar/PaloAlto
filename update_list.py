@@ -1,7 +1,5 @@
 import requests
-import re
 
-# Source URL of the torrent blocklist (RAW format)
 SOURCE_URL = "https://raw.githubusercontent.com/blocklistproject/Lists/master/torrent.txt"
 OUTPUT_FILE = "torrent-urls.txt"
 
@@ -10,10 +8,12 @@ def extract_urls(text):
     for line in text.splitlines():
         line = line.strip()
         if line.startswith("#") or not line:
-            continue  # skip comments and blank lines
-        # Clean URL-like entries only (skip IPs if needed)
-        if re.match(r"^(https?://|www\.)", line) or "." in line:
-            urls.append(line)
+            continue  # skip comments and empty lines
+        parts = line.split()
+        if len(parts) == 2 and parts[0] in ("0.0.0.0", "127.0.0.1"):
+            urls.append(parts[1])  # keep only the domain
+        elif len(parts) == 1:
+            urls.append(parts[0])
     return urls
 
 def main():
@@ -23,7 +23,7 @@ def main():
         with open(OUTPUT_FILE, "w") as f:
             for url in urls:
                 f.write(url + "\n")
-        print(f"{len(urls)} URLs saved to {OUTPUT_FILE}")
+        print(f"{len(urls)} clean URLs saved to {OUTPUT_FILE}")
     else:
         print(f"Failed to fetch source. Status code: {response.status_code}")
 
