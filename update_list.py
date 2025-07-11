@@ -1,34 +1,31 @@
 import requests
+import re
 
-SOURCE_URL = "https://raw.githubusercontent.com/blocklistproject/Lists/main/torrent.txt"
-OUT_FILE = "custom_torrent_urls.txt"
+# Source URL of the torrent blocklist (RAW format)
+SOURCE_URL = "https://raw.githubusercontent.com/blocklistproject/Lists/master/torrent.txt"
+OUTPUT_FILE = "torrent-urls.txt"
 
-def fetch_blocklist(url):
-    resp = requests.get(url)
-    resp.raise_for_status()
-    return resp.text
-
-def parse_urls(blocklist):
+def extract_urls(text):
     urls = []
-    for line in blocklist.splitlines():
+    for line in text.splitlines():
         line = line.strip()
         if line.startswith("#") or not line:
-            continue
-        if line.startswith("0.0.0.0 "):
-            domain = line.split()[1]
-            urls.append(domain)
+            continue  # skip comments and blank lines
+        # Clean URL-like entries only (skip IPs if needed)
+        if re.match(r"^(https?://|www\.)", line) or "." in line:
+            urls.append(line)
     return urls
 
-def save_urls(urls, filename):
-    with open(filename, "w") as f:
-        for url in urls:
-            f.write(url + "\n")
-
 def main():
-    blocklist = fetch_blocklist(SOURCE_URL)
-    urls = parse_urls(blocklist)
-    save_urls(urls, OUT_FILE)
-    print(f"Saved {len(urls)} URLs to {OUT_FILE}")
+    response = requests.get(SOURCE_URL)
+    if response.status_code == 200:
+        urls = extract_urls(response.text)
+        with open(OUTPUT_FILE, "w") as f:
+            for url in urls:
+                f.write(url + "\n")
+        print(f"{len(urls)} URLs saved to {OUTPUT_FILE}")
+    else:
+        print(f"Failed to fetch source. Status code: {response.status_code}")
 
 if __name__ == "__main__":
     main()
